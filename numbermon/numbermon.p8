@@ -4,11 +4,14 @@ __lua__
 --level manager
 
 levels={}
-current_lvl_name='collection'
+current_lvl_name='game'
+message=''
 	
 function _init()
 	poke(0x5f2d,1)
 	init_game_lvl()
+	init_frames()
+	init_numbers()
 	init_collection_level()
 end
 
@@ -31,6 +34,7 @@ function _draw()
 	end
 	
 	draw_mouse()
+	print(message,0,0)
 end
 
 function add_level(lvl)
@@ -50,34 +54,60 @@ end
 -->8
 --game level
 
+current_card={}
+just_click=false
+
 function init_game_lvl()
 	add_level({
 		name='game',
 		update=update_game,
 		draw=draw_game
 	})
+	
+	current_card=get_rnd_card()
 end
 
 function update_game()
+	if (stat(34) == 1 and not just_click) then
+		current_card=get_rnd_card()
+		just_click=true
+	end
 	
+	if (stat(34) ~= 1) then
+		just_click=false
+	end
 end
 
 function draw_game()
-	--draw_number(0,0,❎1,1)
-	--draw_number(0,8,❎2,2)
-	--draw_number(0,16,❎3,3)
-	--draw_number(0,24,❎4,4)
-	--draw_number(0,32,❎5,5)
-	--draw_number(0,40,❎6,6)
-	--draw_number(0,48,❎7,7)
-	--draw_number(0,56,❎8,8)
-	--draw_number(0,64,❎9,9)
-	--draw_number(0,72,❎0,10)
-	
-	draw_card(60,60,silver,❎6)
+	print('click pour generer une carte')
+	print('')
+	print('rarete des cadres :')
+	print('  bronze < silver < gold')
+	print('')
+	print('plus le chiffre est grand,')
+	print('plus il est rare')
+
+ if current_card.frame then
+		draw_card(60,59,current_card)
+ end
 end
 -->8
 --numbers
+
+numbers={}
+
+function init_numbers()
+	add(numbers,❎1)
+	add(numbers,❎2)
+	add(numbers,❎3)
+	add(numbers,❎4)
+	add(numbers,❎5)
+	add(numbers,❎6)
+	add(numbers,❎7)
+	add(numbers,❎8)
+	add(numbers,❎9)
+	add(numbers,❎0)
+end
 
 ❎1={sx=0,sy=0,sw=5,sh=7}
 ❎2={sx=6,sy=0,sw=5,sh=7}
@@ -106,12 +136,12 @@ end
 -->8
 --cards
 
-function draw_card(x,y,frame,num)
+function draw_card(x,y,card)
 	sspr(
-		frame.sx,
-		frame.sy,
-		frame.sw,
-		frame.sh,
+		card.frame.sx,
+		card.frame.sy,
+		card.frame.sw,
+		card.frame.sh,
 		x,
 		y
 	)
@@ -119,12 +149,49 @@ function draw_card(x,y,frame,num)
 	draw_number(
 		x+2,
 		y+3,
-		num,
-		frame.col
+		card.number,
+		card.frame.col
 	)
+end
+
+function get_rnd_card()
+	local frame_idx=get_rnd_in_table(frames)
+	local number_idx=get_rnd_in_table(numbers)
+	
+	local frame=frames[frame_idx]
+	local number=numbers[number_idx]
+
+	--message='frame: '..frame_idx..' num: '..number_idx
+	return {frame=frame,number=number}
+end
+
+function get_rnd_in_table(table)
+	local result=0
+	
+	for i=1, #table do
+		local random=ceil(rnd(2)) - 1
+		if random == 0 then
+			result=i
+			break
+		end
+		
+		if i == #table then
+			result=i
+		end
+	end
+	
+	return result
 end
 -->8
 --frames
+
+frames={}
+
+function init_frames()
+	add(frames,bronze)
+	add(frames,silver)
+	add(frames,gold)
+end
 
 bronze={sx=0,sy=8,sw=9,sh=13,col=9}
 silver={sx=10,sy=8,sw=9,sh=13,col=6}
@@ -140,15 +207,12 @@ function init_collection_level()
 		update=update_collection,
 		draw=draw_collection
 	})
-	
-	add_card_to_collection({frame=bronze,number=❎1})
-	add_card_to_collection({frame=silver,number=❎3})
-	add_card_to_collection({frame=bronze,number=❎4})
-	add_card_to_collection({frame=gold,number=❎9})
 end
 
 function update_collection()
-	
+	if btnp(❎) then
+		add_card_to_collection(get_rnd_card())	
+	end
 end
 
 function draw_collection()
@@ -161,8 +225,7 @@ function draw_collection()
 		draw_card(
 			x_index*card_width,
 			y_index*card_height,
-			card.frame,
-			card.number
+			card
 		)
 		
 		x_index += 1
